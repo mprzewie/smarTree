@@ -3,32 +3,32 @@
 /**
   * Created by marcin on 2/23/17.
   */
-abstract class Tree[A]{
-  var root: Option[Node[A]]=None
+abstract class Tree{
+  var root: Option[Node]=None
   def size: Int = this match {
     case Node(_,l,r) => 1+l.size+r.size
     case _ => 1
   }
-  def learn(newVal:A)(implicit l:Learner[A]): Tree[A] = this match {
+  def learn(newValParams:List[Double],newValCategory:Int): Tree=this match{
     case Leaf(parameters,category) => {
-      if( category==l.category(newVal) ){
-        val avgParams=(l.parameters(newVal),parameters).zipped.map((x,y) => (x+y)/2)
+      if( category==newValCategory){
+        val avgParams=(newValParams,parameters).zipped.map((x,y) => (x+y)/2)
         Leaf(avgParams,category)
       }
       else {
-        val differences=(l.parameters(newVal),parameters).zipped.map((x,y) => Math.abs((x-y)/(x+y)))
+        val differences=(newValParams,parameters).zipped.map((x,y) => Math.abs((x-y)/(x+y)))
         val pivot:Int=maxInd(differences)
-        val pivotValue:Double=Math.min(parameters(pivot),l.parameters(newVal)(pivot))+differences(pivot)/2
-        def newPredicate:(A => Boolean)={
-          x:A => l.parameters(x)(pivot)>=pivotValue
+        val pivotValue:Double=Math.min(parameters(pivot),newValParams(pivot))+differences(pivot)/2
+        def newPredicate:(List[Double] => Boolean)={
+          params:List[Double] => params(pivot)>=pivotValue
         }
-        if(parameters(pivot)>=pivotValue) Node(newPredicate,Leaf(l.parameters(newVal),l.category(newVal)),this)
-        else Node(newPredicate,this,Leaf(l.parameters(newVal),l.category(newVal)))
+        if(parameters(pivot)>=pivotValue) Node(newPredicate,Leaf(newValParams,newValCategory),this)
+        else Node(newPredicate,this,Leaf(newValParams,newValCategory))
       }
     }
     case Node(predicate, left,right) =>
-      if(predicate(newVal)) Node(predicate,left,right.learn(newVal))
-      else Node(predicate,left.learn(newVal),right)
+      if(predicate(newValParams)) Node(predicate,left,right.learn(newValParams,newValCategory))
+      else Node(predicate,left.learn(newValParams,newValCategory),right)
 
   }
 
@@ -46,10 +46,10 @@ abstract class Tree[A]{
 
 }
 
-case class Node[A](predicate:A =>Boolean, left:Tree[A], right: Tree[A]) extends Tree[A]{
+case class Node(predicate:List[Double] =>Boolean, left:Tree, right: Tree) extends Tree{
 }
 
-case class Leaf[A](parameters:List[Double], category: Int) extends Tree[A]{
+case class Leaf(parameters:List[Double], category: Int) extends Tree{
 
 }
 
@@ -60,10 +60,10 @@ object TreeTest extends App{
 
     override def category(value:Int): Int = value
   }
-  val intLeafFactory=(value:Int) => Leaf[Int](IntLearnable.parameters(value),IntLearnable.category(value))
-  var node:Tree[Int]=Node({ x:Int => x>=50},intLeafFactory(40),intLeafFactory(80))
+  val intLeafFactory=(value:Int) => Leaf(IntLearnable.parameters(value),IntLearnable.category(value))
+  var node:Tree=Node({params:List[Double] => params(0)>=50},intLeafFactory(40),intLeafFactory(80))
   println(node)
-  node=node.learn(50)
+  node=node.learn(List(50),50)
   println(node)
 
 
