@@ -16,11 +16,6 @@ abstract class Tree {
   private def learn(newValParams: List[Double], newValCategory: Int): Tree = this match {
     case EmptyTree() => Leaf(newValParams, newValCategory)
     case Leaf(parameters, category) => {
-      if (category == newValCategory) {
-        val avgParams = (newValParams, parameters).zipped.map((x, y) => (x + y) / 2)
-        Leaf(avgParams, category)
-      }
-      else {
         val differences = (newValParams, parameters).zipped.map((x, y) => Math.abs((x - y) / (x + y)))
         val pivot: Int = maxInd(differences)
         if(differences(pivot)==0) this
@@ -35,7 +30,6 @@ abstract class Tree {
           else Node(newPredicate, this, Leaf(newValParams, newValCategory))
         }
 
-      }
     }
     case Node(predicate, left, right) =>
       if (predicate(newValParams)) Node(predicate, left, right.learn(newValParams, newValCategory))
@@ -65,11 +59,33 @@ abstract class Tree {
     case _ => 0
   }
 
-  //private def trim(): Tree=this
-  def fit(paramsList: List[List[Double]], categoryList: List[Int]): Tree = {
+  private def listLearn(paramsList: List[List[Double]], categoryList: List[Int]): Tree = {
     if (paramsList.isEmpty) this
-    else fit(paramsList.tail, categoryList.tail).learn(paramsList.head, categoryList.head)
+    else listLearn(paramsList.tail, categoryList.tail).learn(paramsList.head, categoryList.head)
   }
+
+  private def trim(): Tree=this match {
+    case Node(predicate, left, right) => {
+      val leftTrimmed=left.trim()
+      val rightTrimmed=right.trim()
+      (leftTrimmed, rightTrimmed) match {
+        case (Leaf(lParams, lCategory), Leaf(rParams, rCategory)) =>{
+          if(lCategory==rCategory){
+            Leaf((lParams,rParams).zipped.map((x,y) => (x+y)/2), lCategory)
+          }
+          else Node(predicate,leftTrimmed,rightTrimmed)
+        }
+        case _ => Node(predicate,leftTrimmed,rightTrimmed)
+      }
+  }
+    case _ => this
+  }
+
+  def fit(paramsList: List[List[Double]], categoryList: List[Int]): Tree = listLearn(paramsList,categoryList).trim()
+
+
+
+
 
   def predict(paramsList:List[List[Double]]):List[Int]={
     paramsList.map(params =>guess(params))
@@ -93,13 +109,7 @@ object TreeTest extends App {
     override def category(value: Int): Int = value
   }
 
-//  val intLeafFactory = (value: Int) => Leaf(IntLearnable.parameters(value), IntLearnable.category(value))
-//  var tree: Tree = EmptyTree()
-//  tree = tree.fit(List(List(4), List(5), List(2)), List(4, 5,2))
-//  println(tree.asInstanceOf[Node].left.size)
-//  println(tree.asInstanceOf[Node].right.size)
-//  //println(tree)
-//  println(tree.predict(List(List(4),List(5), List(6),List(3), List(1))))
+
 
   val filename="src/iris/iris"
 //  println(System.getProperty("user.dir"))
@@ -111,12 +121,15 @@ object TreeTest extends App {
   val trainingCategories=trainingIres.map(ires => ires.getSpecies)
 
   var tree=EmptyTree().fit(trainingParams,trainingCategories)
+  println(tree.size)
   println(tree.predict(List(ires(100).getParams)))
 
   var predictions=tree.predict(ires.map(ires => ires.getParams))
   var actual=ires.map(ires => ires.getSpecies)
   var hits=(predictions,actual).zipped.map((x,y)=> x==y)
   println(hits.count(x => x))
+
+
 
 
 
