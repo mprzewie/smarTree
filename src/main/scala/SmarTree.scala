@@ -1,5 +1,6 @@
-import scala.io.Source
 import iris._
+
+import scala.io.Source
 import scala.util.Random
 /**
   * Created by marcin on 2/23/17.
@@ -101,43 +102,6 @@ case class Leaf(parameters: List[Double], category: Int) extends Tree
 case class EmptyTree() extends Tree
 
 
-object TreeTest extends App {
-
-  implicit object IntLearnable extends Learner[Int] {
-    override def parameters(value: Int): List[Double] = List(value)
-
-    override def category(value: Int): Int = value
-  }
-
-
-
-  val filename="src/iris/iris"
-//  println(System.getProperty("user.dir"))
-  val factory=new IrisFactory
-  val ires=Source.fromFile(filename).getLines().map(line => factory(line)).toList
-  val trainCount=ires.size/2
-  val trainingIres=Random.shuffle(ires).take(trainCount)
-  val trainingParams=trainingIres.map(ires=> ires.getParams)
-  val trainingCategories=trainingIres.map(ires => ires.getSpecies)
-
-  var tree=EmptyTree().fit(trainingParams,trainingCategories)
-  println(tree.size)
-  println(tree.predict(List(ires(100).getParams)))
-
-  var predictions=tree.predict(ires.map(ires => ires.getParams))
-  var actual=ires.map(ires => ires.getSpecies)
-  var hits=(predictions,actual).zipped.map((x,y)=> x==y)
-  println(hits.count(x => x))
-
-
-
-
-
-  println(tree)
-
-
-
-}
 
 
 
